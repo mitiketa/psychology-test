@@ -1,0 +1,206 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>性格診断テスト</title>
+  <style>
+    body {
+      margin: 0;
+      background: white;
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+    #startBtn {
+      font-size: 24px;
+      padding: 20px 40px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    #overlay, #jumpscare, #flash, #location, #curse {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    #overlay {
+      background: black;
+      color: lime;
+      flex-direction: column;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    #overlay .log {
+      font-size: 16px;
+      margin: 4px 0;
+      white-space: pre-wrap;
+    }
+    #jumpscare {
+      background: black;
+      flex-direction: column;
+    }
+    #jumpscare img {
+      max-width: 80vw;
+      max-height: 80vh;
+    }
+    #flash {
+      background: red;
+      opacity: 0.9;
+      animation: flash 0.2s linear;
+    }
+    @keyframes flash {
+      0% { opacity: 0.9; }
+      100% { opacity: 0; }
+    }
+    #curse, #location {
+      background: black;
+      color: white;
+      font-size: 24px;
+      font-family: monospace;
+      flex-direction: column;
+      text-align: center;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>性格診断テスト</h2>
+<button id="startBtn">診断スタート</button>
+
+<div id="overlay">
+  <div id="logArea"></div>
+</div>
+
+<div id="jumpscare">
+  <img src="https://i.imgur.com/tnwQrTZ.png" alt="jumpscare" />
+</div>
+
+<div id="flash"></div>
+
+<div id="location">
+  <div id="locationText"></div>
+</div>
+
+<div id="curse">
+  <div id="curseText"></div>
+</div>
+
+<audio id="beep" src="https://www.orangefreesounds.com/wp-content/uploads/2022/01/Long-beep-sound.mp3" preload="auto"></audio>
+
+<script>
+  const startBtn = document.getElementById("startBtn");
+  const overlay = document.getElementById("overlay");
+  const jumpscare = document.getElementById("jumpscare");
+  const logArea = document.getElementById("logArea");
+  const flash = document.getElementById("flash");
+  const locationDiv = document.getElementById("location");
+  const locationText = document.getElementById("locationText");
+  const curse = document.getElementById("curse");
+  const curseText = document.getElementById("curseText");
+  const beep = document.getElementById("beep");
+
+  const logs = [
+    "[診断データ読み込み中...]",
+    "[IPアドレス取得中...]",
+    "[地域・通信環境分析中...]",
+    "[プロバイダ照合中...]",
+    "[ブラウザ識別中...]",
+    "[アクセス履歴取得中...]",
+    "[セキュリティチェック中...]",
+    "[あなたの情報が一致しました]",
+    "[最終解析結果を取得中...]",
+    "3...", "2...", "1..."
+  ];
+
+  const curseMessage = ["...", "あ", "...な", "...た", "...を", "...み", "...て", "...い", "...ま", "...す", "。"];
+
+  startBtn.addEventListener("click", () => {
+    startBtn.style.display = "none";
+    document.querySelector("h2").style.display = "none";
+    beep.play().catch(() => {});
+    runSequence();
+  });
+
+  function runSequence() {
+    overlay.style.display = "flex";
+
+    fetch('https://ipapi.co/json/')
+      .then(res => res.json())
+      .then(data => {
+        logs[1] = `[IPアドレス] ${data.ip}`;
+        logs[2] = `[地域] ${data.city}, ${data.region}, ${data.country_name}`;
+        logs[3] = `[プロバイダ] ${data.org}`;
+        logs[4] = `[ブラウザ] ${navigator.userAgent}`;
+        logs.push(`[位置情報: ${data.city}, ${data.region}, ${data.country_name}]`);
+
+        locationText.innerText =
+          `[IPアドレス: ${data.ip}]
+` +
+          `[推定地域: ${data.region} ${data.city}]
+` +
+          `[プロバイダ: ${data.org}]
+` +
+          `[データソース: 通信ログ + セッション情報]
+
+` +
+          `あなたの位置を特定しました。`;
+      })
+      .finally(() => {
+        let i = 0;
+        const interval = setInterval(() => {
+          if (i < logs.length) {
+            const log = document.createElement("div");
+            log.className = "log";
+            log.textContent = logs[i++];
+            logArea.appendChild(log);
+          } else {
+            clearInterval(interval);
+            flash.style.display = "block";
+            setTimeout(() => {
+              flash.style.display = "none";
+              overlay.style.display = "none";
+              jumpscare.style.display = "flex";
+              beep.currentTime = 0;
+              beep.play();
+              setTimeout(() => {
+                jumpscare.style.display = "none";
+                locationDiv.style.display = "flex";
+                setTimeout(() => {
+                  locationDiv.style.display = "none";
+                  curse.style.display = "flex";
+                  showCurse();
+                }, 6000);
+              }, 2000);
+            }, 200);
+          }
+        }, 1000);
+      });
+  }
+
+  function showCurse() {
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i < curseMessage.length) {
+        curseText.textContent += curseMessage[i++];
+        beep.currentTime = 0;
+        beep.play();
+      } else {
+        clearInterval(interval);
+      }
+    }, 700);
+  }
+</script>
+
+</body>
+</html>
